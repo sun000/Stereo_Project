@@ -4,7 +4,7 @@ I have Implement the Zhang's Method of camera calibrate.
 
 My code can calculate the intrinsics and the extrinsics accurately!
 
-But there are some bugs about distortion coeﬃcients. I will deal with them as soon as possible.
+
 
 ### How to Run
 
@@ -22,3 +22,16 @@ I write my code in Pycharm, you can open it in PyCharm and run it.
 
 
 If you want to know more about my code, you can see code. There are some node for you to understand my code.
+
+
+
+### Where is the Report ?
+
+Camera Basics Report.md
+
+
+
+### Where is the Results?
+
+file named Results
+

@@ -176,7 +176,11 @@ def main():
     mtx1, dist1, rvecs1, tvecs1 = calibrate(allImageCorners, patternSize, imageSize)
     mtx2, dist2, Rt, mLambda = ZhangCalibrate(allImageCorners, patternSize)
     undistortAll(originImages, mtx2, dist1)
-    print(mtx1, mtx2)
+    print('intrinsics:\n', mtx2)
+    print('extrinsics(Rt):')
+    for rt in Rt:
+        print(rt)
+    print('distortion coeﬃcients:\n',dist2)
 
 if __name__ == '__main__':
     main()

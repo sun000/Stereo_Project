@@ -10,14 +10,14 @@
 
   * 坐标变换：有世界坐标XOY（图像坐标，这里假设标定板所在平面是z=0平面，方便操作）和相机内部坐标uov（像素坐标），需要将XOY中的坐标转化到uov上。则有
 
-    ![intrinsics](img/intrinsics.png)
+    ![intrinsics](Img/intrinsics.png)
 
     * $u_0、 v_0$：XOY原点在uov中的坐标
     * $d_X、d_Y$：XOY中的单位长度在uov中的长度，分别是X和Y轴方向的
 
   * 针孔成像：
 
-    ![针孔成像模型](img/针孔成像模型.png)
+    ![针孔成像模型](Img/针孔成像模型.png)
 
     * s：比例因子
     * f：有效焦距（光心到图像平面的距离）
@@ -29,7 +29,7 @@
 
 * camera matrix：由相机内参构成的矩阵。我们综合考虑上面所讲的intrinsics和extrinsics。有如下方程：
 
-  ![相机矩阵](img/相机矩阵.png)
+  ![相机矩阵](Img/相机矩阵.png)
 
   
 
@@ -45,7 +45,7 @@
 
 则我们可以得到相机内参矩阵
 
-![Problem2](img/Problem2.jpg)
+![Problem2](Img/Problem2.jpg)
 
 
 

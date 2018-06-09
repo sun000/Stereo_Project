@@ -22,7 +22,6 @@ def getAllImageCorners(images, patternSize):
         retval, outCorners = cv.findChessboardCorners(image, patternSize)
         criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
         outCorners = cv.cornerSubPix(image, outCorners, (5, 5), (-1, -1), criteria)
-        # print(outCorners.shape)
         allConers.append(outCorners)
         if DEBUG:
             image = cv.drawChessboardCorners(image, patternSize, outCorners, retval)
@@ -48,12 +47,15 @@ def calibrate(allImageCorners, patternSize, imageSize):
     ret, mtx, dist, rvecs, tvecs = cv.calibrateCamera(objectCorners, allImageCorners, imageSize, None, None)
     return mtx, dist, rvecs, tvecs
 
-def undistortAll(images, mtx, dist):
+def undistortAll(images, mtx, dist, path):
     cv.namedWindow('undistorted images')
+    cnt = 1
     for image in images:
         dst = cv.undistort(image, mtx, dist)
         cv.imshow('undistorted images', dst)
+        cv.imwrite(path + 'left' + str(cnt) + '.jpg', dst )
         cv.waitKey(500)
+        cnt = cnt + 1
     cv.destroyWindow('undistorted images')
 
 ######################        张正友的标定法           #############################
@@ -144,7 +146,7 @@ def getDisCoef(allImageCorners, objectCorners, H, K):
     d = list(map(lambda undist, dist: dist - undist, undisortImgCorners, allImageCorners))
     d = np.array(d).reshape(-1)
     D = getD(K[0, 2], K[1, 2], undisortImgCorners, objectCorners)
-    k = -np.linalg.inv(D.T @ D) @ D.T @ d
+    k = np.linalg.inv(D.T @ D) @ D.T @ d
     dist = np.zeros((1, 5))
     dist[0, 0] = k[0]
     dist[0, 1] = k[1]
@@ -153,7 +155,7 @@ def getDisCoef(allImageCorners, objectCorners, H, K):
 def getRt(H, K, mLambda):
     Rt = []
     K_inv = np.linalg.inv(K)
-    # lamda = 1 / np.power((K_inv @ K[:, 0] ), 2).sum(), 1 / np.power((K_inv @ K[:, 1] ), 2).sum())
+    mLambda = (1 / np.power((K_inv @ K[:, 0] ), 2).sum() +   1 / np.power((K_inv @ K[:, 1] ), 2).sum()) / 2
     for h in H:
         Rt.append(mLambda * K_inv @ h)
     return Rt
@@ -166,21 +168,71 @@ def ZhangCalibrate(allImageCorners, patternSize):
     mLambda, K = getK(H)
     Rt = getRt(H, K, mLambda)
     dist = getDisCoef(allImageCorners, objectCorners, H, K)
+
     return K, dist, Rt, mLambda
+
+def loss(originCorners, undistortCorners, filename):
+    f = open(filename, 'w')
+    l = 0
+    f.write("Every Image's loss:\n")
+    for o, u in zip(originCorners, undistortCorners):
+        tl = np.mean(np.power((o - u), 2))
+        f.write(str(tl) + '\n')
+        l += tl
+    f.close()
+    return l / 13
+
+def myUndistort(tmp, k1, k2, u0, v0, obj):
+    obj = np.delete(obj, 2, 1)
+    g = np.sum(np.power(obj, 2), axis = 1).reshape((54,1))
+    g = k1 * g + k2 * np.power(g, 2)
+    tmp = tmp  + (tmp - np.array([u0, v0])) * g
+    return tmp
 
 def main():
     originImages = loadImage('../stereo/imageList.txt')
     imageSize = originImages[0].shape[:-1]
     patternSize = (6, 9)
     allImageCorners = getAllImageCorners(originImages, patternSize)
+
+    #calibrate using opencv
     mtx1, dist1, rvecs1, tvecs1 = calibrate(allImageCorners, patternSize, imageSize)
+    dist1[0, 2] = 0
+    dist1[0, 3] = 0
+    dist1[0, 4] = 0
+    objCorners = getObjectCorner(patternSize)
+    undistortCorners = []
+    for rvecs, tvecs in zip(rvecs1, tvecs1):
+        undistortCorners.append(cv.projectPoints(objCorners, rvecs, tvecs, mtx1, dist1)[0])
+    l = loss(allImageCorners, undistortCorners, '../Result/CameraBasics/opencvResult/result.txt',)
+    # write result
+    with open('../Result/CameraBasics/opencvResult/result.txt', 'a') as f:
+        f.write("opencv loss: " + str(l) + '\n')
+        f.write('opencv intrinsics:\n' +  str(mtx1) + '\n')
+        f.write('opencv distortion coeﬃcients:\n' + str(dist1) + '\n')
+    undistortAll(originImages, mtx1, dist1,
+                 '../Result/CameraBasics/opencvResult/')  # undistort images using parameter from Zhang's method
+
+    #calibrate using Zhang's method implemented by me
     mtx2, dist2, Rt, mLambda = ZhangCalibrate(allImageCorners, patternSize)
-    undistortAll(originImages, mtx2, dist1)
-    print('intrinsics:\n', mtx2)
-    print('extrinsics(Rt):')
+    undistortCorners = []
+    objCorners[:, -1] += 1
+
     for rt in Rt:
-        print(rt)
-    print('distortion coeﬃcients:\n',dist2)
+        tmpCoeners = (mtx2 @ rt @ objCorners.T).T
+        tmpCoeners /= tmpCoeners[:,2:3]
+        tmpCoeners = np.delete(tmpCoeners, 2, 1)
+        tmpCoeners = myUndistort(tmpCoeners, dist2[0, 0], dist2[0, 1], mtx2[0, 2], mtx2[1, 2], objCorners)
+        undistortCorners.append(tmpCoeners)
+    allImageCorners = list(map(lambda imageCorners: imageCorners.reshape((54, 2)), allImageCorners))
+    l = loss(allImageCorners, undistortCorners, '../Result/CameraBasics/myImplementResult/result.txt')
+
+    with open('../Result/CameraBasics/myImplementResult/result.txt', 'a') as f:
+        f.write("My Implement:\n" + str(l))
+        f.write('my implement intrinsics:\n' +  str(mtx2) + '\n')
+        f.write('my implement distortion coeﬃcients:\n' + str(dist2) + '\n')
+    undistortAll(originImages, mtx2, dist1,
+                 '../Result/CameraBasics/myImplementResult/')  # undistort images using parameter from Zhang's method
 
 if __name__ == '__main__':
     main()

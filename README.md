@@ -4,7 +4,7 @@ I have Implement the Zhang's Method of camera calibrate.
 
 My code can calculate the intrinsics and the extrinsics accurately!
 
-
+There may stillbe some bugs about distortion coeﬃcients In my implement method. I will solve them as soon  as possible.
 
 ### How to Run
 

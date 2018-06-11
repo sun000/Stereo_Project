@@ -12,7 +12,7 @@
 
     ![intrinsics](Img/intrinsics.png)
 
-    * $u_0、 v_0$：XOY原点在uov中的坐标
+    * $u_0、 v_0$：XOY原点在uov中的坐标，其实就相当于坐标原点的偏移
     * $d_X、d_Y$：XOY中的单位长度在uov中的长度，分别是X和Y轴方向的
 
   * 针孔成像：
